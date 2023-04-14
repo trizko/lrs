@@ -26,21 +26,7 @@ impl Config {
             };
         }
 
-        let options = if let Some(options) = args.iter().find(|a| a.starts_with('-')) {
-            let mut result = vec![];
-
-            for c in options.chars() {
-                match c {
-                    'a' => result.push(CLIOptions::All),
-                    'l' => result.push(CLIOptions::List),
-                    _ => {}
-                }
-            }
-
-            result
-        } else {
-            vec![]
-        };
+        let options = Config::parse_options(&args);
 
         if args.len() == 2 {
             return Config {
@@ -59,6 +45,26 @@ impl Config {
             options: options,
             path: path,
         }
+    }
+
+    fn parse_options(args: &Vec<String>) -> Vec<CLIOptions> {
+        let options_string: String = args
+            .iter()
+            .filter(|a| a.starts_with('-'))
+            .map(|a| a[1..].to_string())
+            .collect::<Vec<String>>()
+            .join("");
+
+        let mut result = vec![];
+        for c in options_string.chars() {
+            match c {
+                'a' => result.push(CLIOptions::All),
+                'l' => result.push(CLIOptions::List),
+                _ => {}
+            }
+        }
+
+        result
     }
 }
 
