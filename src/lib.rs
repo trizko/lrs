@@ -47,6 +47,10 @@ impl Config {
         }
     }
 
+    fn parse_path(args: &Vec<String>) -> String {
+        unimplemented!()
+    }
+
     fn parse_options(args: &Vec<String>) -> Vec<CLIOptions> {
         let options_string: String = args
             .iter()
@@ -223,6 +227,56 @@ mod tests {
 
         for (test_args, expect) in zipped {
             let actual = Config::parse_options(test_args);
+            assert_eq!(expect, actual, "input args: {:?}", test_args);
+        }
+    }
+
+    #[test]
+    fn parse_path_returns_current_dir_when_no_path_is_specified() {
+        let test_cases: Vec<Vec<String>> = vec![
+            vec!["bin".to_string()],
+            vec!["bin".to_string(), "-l".to_string()],
+            vec!["bin".to_string(), "-la".to_string()],
+            vec!["bin".to_string(), "-l".to_string(), "-a".to_string()],
+        ];
+
+        let expected: Vec<String> = vec![
+            ".".to_string(),
+            ".".to_string(),
+            ".".to_string(),
+            ".".to_string(),
+        ];
+
+        let zipped: Vec<(&Vec<String>, String)> =
+            test_cases.iter().zip(expected).collect();
+
+        for (test_args, expect) in zipped {
+            let actual = Config::parse_path(test_args);
+            assert_eq!(expect, actual, "input args: {:?}", test_args);
+        }
+    }
+
+    #[test]
+    fn parse_path_returns_path_arg() {
+        let test_cases: Vec<Vec<String>> = vec![
+            vec!["bin".to_string(), "./relative/path".to_string()],
+            vec!["bin".to_string(), "-l".to_string(), "/some/path".to_string()],
+            vec!["bin".to_string(), "-la".to_string(), "/some/other/path".to_string()],
+            vec!["bin".to_string(), "-l".to_string(), "-a".to_string(), "./relative/path".to_string()],
+        ];
+
+        let expected: Vec<String> = vec![
+            "./relative/path".to_string(),
+            "/some/path".to_string(),
+            "/some/other/path".to_string(),
+            "./relative/path".to_string(),
+        ];
+
+        let zipped: Vec<(&Vec<String>, String)> =
+            test_cases.iter().zip(expected).collect();
+
+        for (test_args, expect) in zipped {
+            let actual = Config::parse_path(test_args);
             assert_eq!(expect, actual, "input args: {:?}", test_args);
         }
     }
