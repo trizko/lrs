@@ -20,6 +20,13 @@ struct Config {
 
 impl Config {
     fn new(args: Vec<String>) -> Self {
+        if args.len() == 1 {
+            return Config {
+                options: vec![],
+                path: ".".to_string(),
+            }
+        }
+
         let options = if let Some(options) = args.iter().find(|a| a.starts_with('-')) {
             let mut result = vec![];
 
@@ -35,6 +42,13 @@ impl Config {
         } else {
             vec![]
         };
+
+        if args.len() == 2 {
+            return Config {
+                options: options,
+                path: ".".to_string(),
+            }
+        }
 
         let path = if options.is_empty() {
             args[1].clone()
