@@ -1,0 +1,166 @@
+use chrono::{DateTime, Utc};
+use std::fs::{read_dir};
+use std::os::unix::fs::PermissionsExt;
+use std::os::unix::prelude::MetadataExt;
+use std::time::{SystemTime};
+use users::{get_group_by_gid, get_user_by_uid};
+
+#[derive(Debug, Clone, PartialEq)]
+enum CLIOptions {
+    All,
+    List,
+}
+
+#[derive(Debug, Clone)]
+pub struct Config {
+    options: Vec<CLIOptions>,
+    path: String,
+}
+
+impl Config {
+    pub fn new(args: Vec<String>) -> Self {
+        if args.len() == 1 {
+            return Config {
+                options: vec![],
+                path: ".".to_string(),
+            }
+        }
+
+        let options = if let Some(options) = args.iter().find(|a| a.starts_with('-')) {
+            let mut result = vec![];
+
+            for c in options.chars() {
+                match c {
+                    'a' => result.push(CLIOptions::All),
+                    'l' => result.push(CLIOptions::List),
+                    _ => {}
+                }
+            }
+
+            result
+        } else {
+            vec![]
+        };
+
+        if args.len() == 2 {
+            return Config {
+                options: options,
+                path: ".".to_string(),
+            }
+        }
+
+        let path = if options.is_empty() {
+            args[1].clone()
+        } else {
+            args[2].clone()
+        };
+
+        Config {
+            options: options,
+            path: path,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Entry {
+    permissions: u32,
+    owner: String,
+    group: String,
+    file_size: u64,
+    updated_at: String,
+    filename: String,
+    file_type: EntryType,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum EntryType {
+    Hidden,
+    Normal,
+}
+
+#[derive(Debug, Clone)]
+pub struct CLI {
+    entries: Vec<Entry>,
+    config: Config,
+}
+
+impl CLI {
+    pub fn from_config(config: Config) -> Self {
+        let mut results: Vec<Entry> = vec![];
+
+        if let Ok(entries) = read_dir(&config.path) {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let permissions = entry.metadata().unwrap().permissions().mode();
+                    let owner = get_user_by_uid(entry.metadata().unwrap().uid())
+                        .unwrap()
+                        .name()
+                        .to_string_lossy()
+                        .to_string();
+                    let group = get_group_by_gid(entry.metadata().unwrap().gid())
+                        .unwrap()
+                        .name()
+                        .to_string_lossy()
+                        .to_string();
+                    let system_time: SystemTime = entry.metadata().unwrap().modified().unwrap();
+                    let datetime: DateTime<Utc> = system_time.into();
+                    let updated_at = datetime.format("%b %d %H:%M").to_string();
+                    let file_size = entry.metadata().unwrap().len();
+                    let filename = entry.file_name().to_str().unwrap().to_string();
+                    let file_type = if filename.starts_with('.') {
+                        EntryType::Hidden
+                    } else {
+                        EntryType::Normal
+                    };
+                    results.push(Entry {
+                        permissions,
+                        owner,
+                        group,
+                        file_size,
+                        updated_at,
+                        filename,
+                        file_type,
+                    })
+                }
+            }
+        }
+
+        results.sort_by_key(|entry| entry.filename.clone());
+
+        CLI {
+            entries: results,
+            config: config,
+        }
+    }
+
+    pub fn run(&self) {
+        let entries = if !self.config.options.contains(&CLIOptions::All) {
+            self.entries.iter().filter(|e| e.file_type == EntryType::Normal).map(|e| e.clone()).collect()
+        } else {
+            self.entries.clone()
+        };
+
+        if self.config.options.contains(&CLIOptions::List) {
+            for item in entries {
+                println!(
+                    "{}\t{}\t{}\t{}\t{}\t{}",
+                    item.permissions,
+                    item.owner,
+                    item.group,
+                    item.file_size,
+                    item.updated_at,
+                    item.filename,
+                )
+            }
+        } else {
+            for item in entries {
+                print!(
+                    "{} ",
+                    item.filename,
+                )
+            }
+            println!();
+        }
+    }
+}
