@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
-use std::fs::{read_dir};
+use std::fs::read_dir;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::prelude::MetadataExt;
-use std::time::{SystemTime};
+use std::time::SystemTime;
 use users::{get_group_by_gid, get_user_by_uid};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -136,7 +136,11 @@ impl CLI {
 
     pub fn run(&self) {
         let entries = if !self.config.options.contains(&CLIOptions::All) {
-            self.entries.iter().filter(|e| e.file_type == EntryType::Normal).map(|e| e.clone()).collect()
+            self.entries
+                .iter()
+                .filter(|e| e.file_type == EntryType::Normal)
+                .map(|e| e.clone())
+                .collect()
         } else {
             self.entries.clone()
         };
@@ -155,10 +159,7 @@ impl CLI {
             }
         } else {
             for item in entries {
-                print!(
-                    "{} ",
-                    item.filename,
-                )
+                print!("{} ", item.filename,)
             }
             println!();
         }
