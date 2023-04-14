@@ -23,7 +23,7 @@ impl Config {
             return Config {
                 options: vec![],
                 path: ".".to_string(),
-            }
+            };
         }
 
         let options = if let Some(options) = args.iter().find(|a| a.starts_with('-')) {
@@ -46,7 +46,7 @@ impl Config {
             return Config {
                 options: options,
                 path: ".".to_string(),
-            }
+            };
         }
 
         let path = if options.is_empty() {
