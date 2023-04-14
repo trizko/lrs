@@ -19,27 +19,8 @@ pub struct Config {
 
 impl Config {
     pub fn new(args: Vec<String>) -> Self {
-        if args.len() == 1 {
-            return Config {
-                options: vec![],
-                path: ".".to_string(),
-            };
-        }
-
         let options = Config::parse_options(&args);
-
-        if args.len() == 2 {
-            return Config {
-                options: options,
-                path: ".".to_string(),
-            };
-        }
-
-        let path = if options.is_empty() {
-            args[1].clone()
-        } else {
-            args[2].clone()
-        };
+        let path = Config::parse_path(&args);
 
         Config {
             options: options,
@@ -48,7 +29,17 @@ impl Config {
     }
 
     fn parse_path(args: &Vec<String>) -> String {
-        unimplemented!()
+        let no_bin_args = &args[1..];
+        let no_flags_args: Vec<String> = no_bin_args
+            .iter()
+            .filter(|p| !p.starts_with('-'))
+            .map(|p| p.clone())
+            .collect();
+
+        match no_flags_args.get(0) {
+            Some(path) => path.clone(),
+            None => ".".to_string(),
+        }
     }
 
     fn parse_options(args: &Vec<String>) -> Vec<CLIOptions> {
@@ -247,8 +238,7 @@ mod tests {
             ".".to_string(),
         ];
 
-        let zipped: Vec<(&Vec<String>, String)> =
-            test_cases.iter().zip(expected).collect();
+        let zipped: Vec<(&Vec<String>, String)> = test_cases.iter().zip(expected).collect();
 
         for (test_args, expect) in zipped {
             let actual = Config::parse_path(test_args);
@@ -260,9 +250,22 @@ mod tests {
     fn parse_path_returns_path_arg() {
         let test_cases: Vec<Vec<String>> = vec![
             vec!["bin".to_string(), "./relative/path".to_string()],
-            vec!["bin".to_string(), "-l".to_string(), "/some/path".to_string()],
-            vec!["bin".to_string(), "-la".to_string(), "/some/other/path".to_string()],
-            vec!["bin".to_string(), "-l".to_string(), "-a".to_string(), "./relative/path".to_string()],
+            vec![
+                "bin".to_string(),
+                "-l".to_string(),
+                "/some/path".to_string(),
+            ],
+            vec![
+                "bin".to_string(),
+                "-la".to_string(),
+                "/some/other/path".to_string(),
+            ],
+            vec![
+                "bin".to_string(),
+                "-l".to_string(),
+                "-a".to_string(),
+                "./relative/path".to_string(),
+            ],
         ];
 
         let expected: Vec<String> = vec![
@@ -272,8 +275,7 @@ mod tests {
             "./relative/path".to_string(),
         ];
 
-        let zipped: Vec<(&Vec<String>, String)> =
-            test_cases.iter().zip(expected).collect();
+        let zipped: Vec<(&Vec<String>, String)> = test_cases.iter().zip(expected).collect();
 
         for (test_args, expect) in zipped {
             let actual = Config::parse_path(test_args);
