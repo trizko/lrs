@@ -165,3 +165,59 @@ impl CLI {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_options_returns_valid_vec() {
+        let test_cases: Vec<Vec<String>> = vec![
+            vec!["bin".to_string()],
+            vec!["bin".to_string(), "-l".to_string()],
+            vec!["bin".to_string(), "-a".to_string()],
+            vec!["bin".to_string(), "-la".to_string()],
+            vec!["bin".to_string(), "-l".to_string(), "-a".to_string()],
+            vec!["bin".to_string(), "-a".to_string(), "-l".to_string()],
+            vec!["bin".to_string(), ".".to_string()],
+            vec!["bin".to_string(), "-l".to_string(), ".".to_string()],
+            vec!["bin".to_string(), "-a".to_string(), ".".to_string()],
+            vec!["bin".to_string(), "-la".to_string(), ".".to_string()],
+            vec![
+                "bin".to_string(),
+                "-l".to_string(),
+                "-a".to_string(),
+                ".".to_string(),
+            ],
+            vec![
+                "bin".to_string(),
+                "-a".to_string(),
+                "-l".to_string(),
+                ".".to_string(),
+            ],
+        ];
+
+        let expected: Vec<Vec<CLIOptions>> = vec![
+            vec![],
+            vec![CLIOptions::List],
+            vec![CLIOptions::All],
+            vec![CLIOptions::List, CLIOptions::All],
+            vec![CLIOptions::List, CLIOptions::All],
+            vec![CLIOptions::All, CLIOptions::List],
+            vec![],
+            vec![CLIOptions::List],
+            vec![CLIOptions::All],
+            vec![CLIOptions::List, CLIOptions::All],
+            vec![CLIOptions::List, CLIOptions::All],
+            vec![CLIOptions::All, CLIOptions::List],
+        ];
+
+        let zipped: Vec<(&Vec<String>, Vec<CLIOptions>)> =
+            test_cases.iter().zip(expected).collect();
+
+        for (test_args, expect) in zipped {
+            let actual = Config::parse_options(test_args);
+            assert_eq!(expect, actual, "input args: {:?}", test_args);
+        }
+    }
+}
