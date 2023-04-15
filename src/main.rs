@@ -1,9 +1,9 @@
+use lrs::CLI;
 use std::env;
-use lrs::{Config,CLI};
 
 fn main() {
-    let config: Config = Config::new(env::args().collect());
-    let cli: CLI = CLI::from_config(config.clone());
-
-    cli.run();
+    match CLI::from_config(env::args()) {
+        Ok(cli) => cli.run(),
+        Err(e) => eprintln!("{:?}", e.to_string()),
+    }
 }

@@ -1,5 +1,7 @@
 use chrono::{DateTime, Utc};
-use std::fs::{read_dir, DirEntry, ReadDir};
+use std::env::Args;
+use std::fs::{read_dir, DirEntry};
+use std::io::{Error, ErrorKind};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::prelude::MetadataExt;
 use std::time::SystemTime;
@@ -87,69 +89,73 @@ pub struct CLI {
 }
 
 impl CLI {
-    pub fn from_config(config: Config) -> Self {
+    pub fn from_config(args: Args) -> Result<Self, Error> {
+        let config: Config = Config::new(args.collect());
         let mut results: Vec<Entry> = vec![];
-        let entries: Vec<Result<DirEntry, _>> = CLI::get_entries(&config.path).into_iter().collect();
+        let entries: Vec<Result<DirEntry, _>> = read_dir(&config.path)?.into_iter().collect();
 
         for entry in entries {
             if let Ok(entry) = entry {
                 results.push(Entry {
-                    permissions: CLI::get_permissions(&entry),
-                    owner: CLI::get_owner_name(&entry),
-                    group: CLI::get_group_name(&entry),
-                    file_size: CLI::get_file_size(&entry),
-                    modified_at: CLI::get_modified_at(&entry),
-                    filename: CLI::get_filename(&entry),
-                    file_type: CLI::get_file_type(&CLI::get_filename(&entry)),
+                    permissions: CLI::get_permissions(&entry)?,
+                    owner: CLI::get_owner_name(&entry)?,
+                    group: CLI::get_group_name(&entry)?,
+                    file_size: CLI::get_file_size(&entry)?,
+                    modified_at: CLI::get_modified_at(&entry)?,
+                    filename: CLI::get_filename(&entry)?,
+                    file_type: CLI::get_file_type(&CLI::get_filename(&entry)?),
                 })
             }
         }
 
         results.sort_by_key(|entry| entry.filename.clone());
 
-        CLI {
+        Ok(CLI {
             entries: results,
             config: config,
-        }
+        })
     }
 
-    fn get_entries(path: &String) -> ReadDir {
-        read_dir(path).unwrap()
+    fn get_permissions(entry: &DirEntry) -> Result<u32, Error> {
+        Ok(entry.metadata()?.permissions().mode())
     }
 
-    fn get_permissions(entry: &DirEntry) -> u32 {
-        entry.metadata().unwrap().permissions().mode()
-    }
-
-    fn get_owner_name(entry: &DirEntry) -> String {
-        get_user_by_uid(entry.metadata().unwrap().uid())
-            .unwrap()
+    fn get_owner_name(entry: &DirEntry) -> Result<String, Error> {
+        Ok(get_user_by_uid(entry.metadata()?.uid())
+            .ok_or(Error::new(ErrorKind::Other, "Error occured getting uid"))?
             .name()
             .to_string_lossy()
-            .to_string()
+            .to_string())
     }
 
-    fn get_group_name(entry: &DirEntry) -> String {
-        get_group_by_gid(entry.metadata().unwrap().gid())
-            .unwrap()
+    fn get_group_name(entry: &DirEntry) -> Result<String, Error> {
+        Ok(get_group_by_gid(entry.metadata()?.gid())
+            .ok_or(Error::new(ErrorKind::Other, "Error occured getting uid"))?
             .name()
             .to_string_lossy()
-            .to_string()
+            .to_string())
     }
 
-    fn get_modified_at(entry: &DirEntry) -> String {
-        let system_time: SystemTime = entry.metadata().unwrap().modified().unwrap();
+    fn get_file_size(entry: &DirEntry) -> Result<u64, Error> {
+        Ok(entry.metadata()?.len())
+    }
+
+    fn get_modified_at(entry: &DirEntry) -> Result<String, Error> {
+        let system_time: SystemTime = entry.metadata()?.modified()?;
         let datetime: DateTime<Utc> = system_time.into();
 
-        datetime.format("%b %d %H:%M").to_string()
+        Ok(datetime.format("%b %d %H:%M").to_string())
     }
 
-    fn get_file_size(entry: &DirEntry) -> u64 {
-        entry.metadata().unwrap().len()
-    }
-
-    fn get_filename(entry: &DirEntry) -> String {
-        entry.file_name().to_str().unwrap().to_string()
+    fn get_filename(entry: &DirEntry) -> Result<String, Error> {
+        Ok(entry
+            .file_name()
+            .to_str()
+            .ok_or(Error::new(
+                ErrorKind::Other,
+                "filename does not contain valid unicode",
+            ))?
+            .to_string())
     }
 
     fn get_file_type(filename: &String) -> EntryType {
