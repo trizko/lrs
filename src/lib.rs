@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use std::fs::read_dir;
+use std::fs::{read_dir, DirEntry, ReadDir};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::prelude::MetadataExt;
 use std::time::SystemTime;
@@ -69,7 +69,7 @@ struct Entry {
     owner: String,
     group: String,
     file_size: u64,
-    updated_at: String,
+    modified_at: String,
     filename: String,
     file_type: EntryType,
 }
@@ -89,41 +89,19 @@ pub struct CLI {
 impl CLI {
     pub fn from_config(config: Config) -> Self {
         let mut results: Vec<Entry> = vec![];
+        let entries: Vec<Result<DirEntry, _>> = CLI::get_entries(&config.path).into_iter().collect();
 
-        if let Ok(entries) = read_dir(&config.path) {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    let permissions = entry.metadata().unwrap().permissions().mode();
-                    let owner = get_user_by_uid(entry.metadata().unwrap().uid())
-                        .unwrap()
-                        .name()
-                        .to_string_lossy()
-                        .to_string();
-                    let group = get_group_by_gid(entry.metadata().unwrap().gid())
-                        .unwrap()
-                        .name()
-                        .to_string_lossy()
-                        .to_string();
-                    let system_time: SystemTime = entry.metadata().unwrap().modified().unwrap();
-                    let datetime: DateTime<Utc> = system_time.into();
-                    let updated_at = datetime.format("%b %d %H:%M").to_string();
-                    let file_size = entry.metadata().unwrap().len();
-                    let filename = entry.file_name().to_str().unwrap().to_string();
-                    let file_type = if filename.starts_with('.') {
-                        EntryType::Hidden
-                    } else {
-                        EntryType::Normal
-                    };
-                    results.push(Entry {
-                        permissions,
-                        owner,
-                        group,
-                        file_size,
-                        updated_at,
-                        filename,
-                        file_type,
-                    })
-                }
+        for entry in entries {
+            if let Ok(entry) = entry {
+                results.push(Entry {
+                    permissions: CLI::get_permissions(&entry),
+                    owner: CLI::get_owner_name(&entry),
+                    group: CLI::get_group_name(&entry),
+                    file_size: CLI::get_file_size(&entry),
+                    modified_at: CLI::get_modified_at(&entry),
+                    filename: CLI::get_filename(&entry),
+                    file_type: CLI::get_file_type(&CLI::get_filename(&entry)),
+                })
             }
         }
 
@@ -132,6 +110,53 @@ impl CLI {
         CLI {
             entries: results,
             config: config,
+        }
+    }
+
+    fn get_entries(path: &String) -> ReadDir {
+        read_dir(path).unwrap()
+    }
+
+    fn get_permissions(entry: &DirEntry) -> u32 {
+        entry.metadata().unwrap().permissions().mode()
+    }
+
+    fn get_owner_name(entry: &DirEntry) -> String {
+        get_user_by_uid(entry.metadata().unwrap().uid())
+            .unwrap()
+            .name()
+            .to_string_lossy()
+            .to_string()
+    }
+
+    fn get_group_name(entry: &DirEntry) -> String {
+        get_group_by_gid(entry.metadata().unwrap().gid())
+            .unwrap()
+            .name()
+            .to_string_lossy()
+            .to_string()
+    }
+
+    fn get_modified_at(entry: &DirEntry) -> String {
+        let system_time: SystemTime = entry.metadata().unwrap().modified().unwrap();
+        let datetime: DateTime<Utc> = system_time.into();
+
+        datetime.format("%b %d %H:%M").to_string()
+    }
+
+    fn get_file_size(entry: &DirEntry) -> u64 {
+        entry.metadata().unwrap().len()
+    }
+
+    fn get_filename(entry: &DirEntry) -> String {
+        entry.file_name().to_str().unwrap().to_string()
+    }
+
+    fn get_file_type(filename: &String) -> EntryType {
+        if filename.starts_with('.') {
+            EntryType::Hidden
+        } else {
+            EntryType::Normal
         }
     }
 
@@ -154,7 +179,7 @@ impl CLI {
                     item.owner,
                     item.group,
                     item.file_size,
-                    item.updated_at,
+                    item.modified_at,
                     item.filename,
                 )
             }
