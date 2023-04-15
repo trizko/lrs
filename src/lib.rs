@@ -89,7 +89,7 @@ pub struct CLI {
 }
 
 impl CLI {
-    pub fn from_config(args: Args) -> Result<Self, Error> {
+    pub fn from_args(args: Args) -> Result<Self, Error> {
         let config: Config = Config::new(args.collect());
         let mut results: Vec<Entry> = vec![];
         let entries: Vec<Result<DirEntry, _>> = read_dir(&config.path)?.into_iter().collect();
