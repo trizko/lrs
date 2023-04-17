@@ -1,4 +1,5 @@
 # `lrs`
+![CI](https://github.com/trizko/lrs/actions/workflows/ci.yml/badge.svg?branch=main)
 
 `lrs` is the port of `ls` to rust that nobody wanted.
 
