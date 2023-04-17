@@ -7,6 +7,6 @@ fn main() {
         Err(e) => {
             eprintln!("{}", e.to_string());
             process::exit(1);
-        },
+        }
     }
 }
