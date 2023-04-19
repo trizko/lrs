@@ -92,20 +92,20 @@ impl CLI {
     pub fn from_args(args: Args) -> Result<Self, Error> {
         let config: Config = Config::new(args.collect());
         let mut results: Vec<Entry> = vec![];
-        let entries: Vec<Result<DirEntry, _>> = read_dir(&config.path)?.into_iter().collect();
+        let entries = read_dir(&config.path)?
+            .into_iter()
+            .filter_map(|entry| entry.ok());
 
         for entry in entries {
-            if let Ok(entry) = entry {
-                results.push(Entry {
-                    permissions: CLI::get_permissions(&entry)?,
-                    owner: CLI::get_owner_name(&entry)?,
-                    group: CLI::get_group_name(&entry)?,
-                    file_size: CLI::get_file_size(&entry)?,
-                    modified_at: CLI::get_modified_at(&entry)?,
-                    filename: CLI::get_filename(&entry)?,
-                    file_type: CLI::get_file_type(&CLI::get_filename(&entry)?),
-                })
-            }
+            results.push(Entry {
+                permissions: CLI::get_permissions(&entry)?,
+                owner: CLI::get_owner_name(&entry)?,
+                group: CLI::get_group_name(&entry)?,
+                file_size: CLI::get_file_size(&entry)?,
+                modified_at: CLI::get_modified_at(&entry)?,
+                filename: CLI::get_filename(&entry)?,
+                file_type: CLI::get_file_type(&CLI::get_filename(&entry)?),
+            })
         }
 
         results.sort_by_key(|entry| entry.filename.clone());
