@@ -167,14 +167,9 @@ impl CLI {
     }
 
     pub fn run(&self) {
-        let entries = self.entries
-            .iter()
-            .filter(|e| {
-                if self.config.options.contains(&CLIOptions::All) {
-                    return true
-                }
-                e.file_type == EntryType::Normal
-            });
+        let entries = self.entries.iter().filter(|e| {
+            self.config.options.contains(&CLIOptions::All) || (e.file_type == EntryType::Normal)
+        });
 
         if self.config.options.contains(&CLIOptions::List) {
             entries.for_each(|item| {
@@ -189,8 +184,7 @@ impl CLI {
                 )
             });
         } else {
-            entries
-                .for_each(|item| print!("{} ", item.filename,));
+            entries.for_each(|item| print!("{} ", item.filename,));
             println!();
         }
     }
