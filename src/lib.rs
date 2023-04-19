@@ -167,18 +167,17 @@ impl CLI {
     }
 
     pub fn run(&self) {
-        let entries = if !self.config.options.contains(&CLIOptions::All) {
-            self.entries
-                .iter()
-                .filter(|e| e.file_type == EntryType::Normal)
-                .map(|e| e.clone())
-                .collect()
-        } else {
-            self.entries.clone()
-        };
+        let entries = self.entries
+            .iter()
+            .filter(|e| {
+                if self.config.options.contains(&CLIOptions::All) {
+                    return true
+                }
+                e.file_type == EntryType::Normal
+            });
 
         if self.config.options.contains(&CLIOptions::List) {
-            for item in entries {
+            entries.for_each(|item| {
                 println!(
                     "{}\t{}\t{}\t{}\t{}\t{}",
                     item.permissions,
@@ -188,11 +187,10 @@ impl CLI {
                     item.modified_at,
                     item.filename,
                 )
-            }
+            });
         } else {
-            for item in entries {
-                print!("{} ", item.filename,)
-            }
+            entries
+                .for_each(|item| print!("{} ", item.filename,));
             println!();
         }
     }
