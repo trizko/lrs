@@ -24,18 +24,15 @@ impl Config {
         let options = Config::parse_options(&args);
         let path = Config::parse_path(&args);
 
-        Config {
-            options: options,
-            path: path,
-        }
+        Config { options, path }
     }
 
-    fn parse_path(args: &Vec<String>) -> String {
+    fn parse_path(args: &[String]) -> String {
         let no_bin_args = &args[1..];
         let no_flags_args: Vec<String> = no_bin_args
             .iter()
             .filter(|p| !p.starts_with('-'))
-            .map(|p| p.clone())
+            .cloned()
             .collect();
 
         match no_flags_args.get(0) {
@@ -44,7 +41,7 @@ impl Config {
         }
     }
 
-    fn parse_options(args: &Vec<String>) -> Vec<CLIOptions> {
+    fn parse_options(args: &[String]) -> Vec<CLIOptions> {
         let options_string: String = args
             .iter()
             .filter(|a| a.starts_with('-'))
@@ -92,9 +89,7 @@ impl CLI {
     pub fn from_args(args: Args) -> Result<Self, Error> {
         let config: Config = Config::new(args.collect());
         let mut results: Vec<Entry> = vec![];
-        let entries = read_dir(&config.path)?
-            .into_iter()
-            .filter_map(|entry| entry.ok());
+        let entries = read_dir(&config.path)?.filter_map(|entry| entry.ok());
 
         for entry in entries {
             results.push(Entry {
@@ -112,7 +107,7 @@ impl CLI {
 
         Ok(CLI {
             entries: results,
-            config: config,
+            config,
         })
     }
 
@@ -158,7 +153,7 @@ impl CLI {
             .to_string())
     }
 
-    fn get_file_type(filename: &String) -> EntryType {
+    fn get_file_type(filename: &str) -> EntryType {
         if filename.starts_with('.') {
             EntryType::Hidden
         } else {
